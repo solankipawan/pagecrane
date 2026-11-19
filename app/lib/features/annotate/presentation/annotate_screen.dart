@@ -8,7 +8,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme/tokens.dart';
 import '../../../core/haptics.dart';
 import '../../../core/widgets/common.dart';
+import '../../documents/data/doc_repository.dart';
 import '../../documents/data/documents_provider.dart';
+import '../../documents/presentation/doc_actions.dart';
 import '../../documents/presentation/doc_tile.dart';
 import '../domain/flatten.dart';
 import '../domain/marks.dart';
@@ -246,9 +248,17 @@ class _AnnotateScreenState extends ConsumerState<AnnotateScreen> {
       changed[e.key] = await flattenPage(src, e.value);
     }
     if (changed.isNotEmpty) {
-      await ref
-          .read(documentsProvider.notifier)
-          .updatePages(widget.id, changed);
+      try {
+        await ref
+            .read(documentsProvider.notifier)
+            .updatePages(widget.id, changed);
+      } on StorageException catch (e) {
+        if (mounted) {
+          setState(() => _saving = false);
+          showSaveError(context, e);
+        }
+        return;
+      }
     }
     Haptics.success();
     if (!mounted) return;

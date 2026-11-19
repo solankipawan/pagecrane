@@ -6,16 +6,21 @@ import '../features/pdf_tools/presentation/export_images_screen.dart';
 import '../features/pdf_tools/presentation/split_screen.dart';
 import '../features/dashboard/home_screen.dart';
 import '../features/documents/presentation/doc_detail_screen.dart';
+import '../features/documents/presentation/open_pdf_screen.dart';
 import '../features/files/files_screen.dart';
 import '../features/image_tools/presentation/target_size_screen.dart';
 import '../features/pdf_tools/presentation/compress_screen.dart';
 import '../features/pdf_tools/presentation/merge_screen.dart';
+import '../features/pdf_tools/presentation/reorder_screen.dart';
+import '../features/pdf_tools/presentation/resize_pages_screen.dart';
 import '../features/scanner/presentation/review_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/tools/tools_screen.dart';
 
 /// Shell route with four tabs (state kept per tab) + full-screen flows on top.
 final router = GoRouter(
+  // Never treat an outside address (e.g. an opened file's content:// URI) as a page.
+  redirect: (_, s) => s.uri.hasScheme ? '/' : null,
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => AppShell(shell: shell),
@@ -45,8 +50,23 @@ final router = GoRouter(
     ),
     GoRoute(path: '/review', builder: (_, _) => const ReviewScreen()),
     GoRoute(
+      path: '/open',
+      builder: (_, s) {
+        final f = s.extra as ({String path, String name})?;
+        return OpenPdfScreen(path: f?.path ?? '', name: f?.name ?? 'Document');
+      },
+    ),
+    GoRoute(
       path: '/doc/:id',
       builder: (_, s) => DocDetailScreen(id: s.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/doc/:id/resize',
+      builder: (_, s) => ResizePagesScreen(id: s.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/doc/:id/reorder',
+      builder: (_, s) => ReorderScreen(id: s.pathParameters['id']!),
     ),
     GoRoute(
       path: '/doc/:id/annotate',
@@ -64,10 +84,21 @@ final router = GoRouter(
       builder: (_, s) =>
           ExportImagesScreen(initialId: s.uri.queryParameters['id']),
     ),
-    GoRoute(path: '/tool/merge', builder: (_, _) => const MergeScreen()),
+    GoRoute(
+      path: '/tool/merge',
+      builder: (_, s) => MergeScreen(
+        initialIds: [
+          for (final id in (s.uri.queryParameters['ids'] ?? '').split(','))
+            if (id.isNotEmpty) id,
+        ],
+      ),
+    ),
     GoRoute(
       path: '/tool/compress',
-      builder: (_, s) => CompressScreen(initialId: s.uri.queryParameters['id']),
+      builder: (_, s) => CompressScreen(
+        initialId: s.uri.queryParameters['id'],
+        startInTarget: s.uri.queryParameters['mode'] == 'target',
+      ),
     ),
     GoRoute(
       path: '/tool/target-size',

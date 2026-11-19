@@ -10,6 +10,7 @@ import '../documents/data/documents_provider.dart';
 import '../documents/data/stored_doc.dart';
 import '../documents/presentation/doc_tile.dart';
 import '../documents/presentation/import_pdf_flow.dart';
+import '../scanner/presentation/camera_scan_screen.dart' show ScanMode;
 import '../scanner/presentation/capture_sheet.dart';
 
 /// Every tool in the app. No [route], [docRoute] or [scan] = not built yet.
@@ -25,6 +26,7 @@ class ToolDef {
     this.docRoute,
     this.scan = false,
     this.importsPdf = false,
+    this.action,
   });
   final String id, label, name, desc;
   final IconData icon;
@@ -36,15 +38,19 @@ class ToolDef {
   final bool scan;
   final bool importsPdf;
 
-  bool get available => route != null || docRoute != null || scan || importsPdf;
+  /// Custom launch (e.g. camera straight into a mode). Must be a top-level function.
+  final void Function(BuildContext, WidgetRef)? action;
+
+  bool get available =>
+      route != null || docRoute != null || scan || importsPdf || action != null;
 }
 
 const tools = <String, ToolDef>{
   'scan': ToolDef(
     'scan',
     'Scan',
-    'Document scanner',
-    'Camera to PDF with auto-crop',
+    'Scan to PDF',
+    'Camera, photos or a PDF, auto-cropped',
     Icons.document_scanner_rounded,
     ToolCategory.scan,
     scan: true,
@@ -52,8 +58,8 @@ const tools = <String, ToolDef>{
   'merge': ToolDef(
     'merge',
     'Merge',
-    'Merge PDFs',
-    'Combine documents, drag to reorder',
+    'Merge PDF',
+    'Combine files in the order you choose',
     Icons.layers_rounded,
     ToolCategory.pdf,
     route: '/tool/merge',
@@ -62,7 +68,7 @@ const tools = <String, ToolDef>{
     'split',
     'Split',
     'Split PDF',
-    'Extract pages or split every N pages',
+    'Pull out pages or split every N pages',
     Icons.content_cut_rounded,
     ToolCategory.pdf,
     route: '/tool/split',
@@ -71,7 +77,7 @@ const tools = <String, ToolDef>{
     'compress',
     'Compress',
     'Compress PDF',
-    'Low · Medium · High with size preview',
+    'Balanced or high, with a size preview',
     Icons.compress_rounded,
     ToolCategory.pdf,
     route: '/tool/compress',
@@ -79,8 +85,8 @@ const tools = <String, ToolDef>{
   'sign': ToolDef(
     'sign',
     'Sign',
-    'Sign & annotate',
-    'Signature, pen, highlight, text',
+    'Sign PDF',
+    'Add a signature, pen, highlight or text',
     Icons.draw_rounded,
     ToolCategory.pdf,
     docRoute: '/doc/{id}/annotate',
@@ -88,8 +94,8 @@ const tools = <String, ToolDef>{
   'target': ToolDef(
     'target',
     'Under KB',
-    'Compress to size',
-    'Hit limits like “under 100 KB”',
+    'Image Under KB',
+    'Shrink a photo below an upload limit',
     Icons.speed_rounded,
     ToolCategory.image,
     route: '/tool/target-size',
@@ -97,8 +103,8 @@ const tools = <String, ToolDef>{
   'resize': ToolDef(
     'resize',
     'Resize',
-    'Resize image',
-    'Scale by %, JPEG quality',
+    'Resize Image',
+    'Scale a photo by % and set quality',
     Icons.photo_size_select_large_rounded,
     ToolCategory.image,
     route: '/tool/target-size?mode=scale',
@@ -106,8 +112,8 @@ const tools = <String, ToolDef>{
   'convert': ToolDef(
     'convert',
     'To PDF',
-    'Images to PDF',
-    'Import photos → auto-cropped PDF',
+    'Image to PDF',
+    'Turn photos into a cropped PDF',
     Icons.picture_as_pdf_rounded,
     ToolCategory.convert,
     scan: true,
@@ -115,8 +121,8 @@ const tools = <String, ToolDef>{
   'pdf2img': ToolDef(
     'pdf2img',
     'PDF → JPG',
-    'PDF to images',
-    'Export pages as JPG or PNG',
+    'PDF to Images',
+    'Save pages as JPG or PNG',
     Icons.image_rounded,
     ToolCategory.convert,
     route: '/tool/export-images',
@@ -130,7 +136,56 @@ const tools = <String, ToolDef>{
     ToolCategory.convert,
     importsPdf: true,
   ),
+  'idcard': ToolDef(
+    'idcard',
+    'ID Card',
+    'ID Card Scan',
+    'Front and back on one page set',
+    Icons.badge_rounded,
+    ToolCategory.scan,
+    action: _scanIdCard,
+  ),
+  'batch': ToolDef(
+    'batch',
+    'Batch',
+    'Batch Scan',
+    'Many pages in a row, auto-capture',
+    Icons.burst_mode_rounded,
+    ToolCategory.scan,
+    action: _scanBatch,
+  ),
+  'reorder': ToolDef(
+    'reorder',
+    'Reorder',
+    'Reorder Pages',
+    'Drag pages into a new order',
+    Icons.swap_vert_rounded,
+    ToolCategory.pdf,
+    docRoute: '/doc/{id}/reorder',
+  ),
+  'resizepdf': ToolDef(
+    'resizepdf',
+    'Resize Pages',
+    'Resize Pages',
+    'Fit pages to A4, Letter or Legal',
+    Icons.aspect_ratio_rounded,
+    ToolCategory.pdf,
+    docRoute: '/doc/{id}/resize',
+  ),
+  'targetpdf': ToolDef(
+    'targetpdf',
+    'Target KB',
+    'Target KB',
+    'Fit a PDF under a size limit',
+    Icons.speed_rounded,
+    ToolCategory.pdf,
+    route: '/tool/compress?mode=target',
+  ),
 };
+
+void _scanIdCard(BuildContext c, WidgetRef r) =>
+    startCameraScan(c, r, mode: ScanMode.idCard);
+void _scanBatch(BuildContext c, WidgetRef r) => startCameraScan(c, r);
 
 const quickTools = [
   'scan',
@@ -145,7 +200,9 @@ const quickTools = [
 
 void openTool(BuildContext context, WidgetRef ref, ToolDef t) {
   Haptics.select();
-  if (t.scan) {
+  if (t.action != null) {
+    t.action!(context, ref);
+  } else if (t.scan) {
     startScan(context, ref);
   } else if (t.importsPdf) {
     importPdf(context, ref);

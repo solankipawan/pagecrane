@@ -69,6 +69,30 @@ ThemeData buildTheme(Brightness brightness, {Color? dynamicPrimary}) {
           ? SystemUiOverlayStyle.light
           : SystemUiOverlayStyle.dark,
     ),
+    // Solid selected segment: the default pale tint vanished over the aurora glow
+    // (Files' All/Starred/Folders read as if the wrong tab was selected).
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? scheme.primary
+              : px.surfaceStrong,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? scheme.onPrimary : text,
+        ),
+        textStyle: WidgetStateProperty.resolveWith(
+          (s) => TextStyle(
+            fontSize: 14,
+            fontWeight: s.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
+        side: WidgetStatePropertyAll(BorderSide(color: px.glassBorder)),
+        minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+      ),
+    ),
     chipTheme: base.chipTheme.copyWith(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.chip),

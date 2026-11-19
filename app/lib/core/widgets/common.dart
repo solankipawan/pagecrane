@@ -136,10 +136,14 @@ class ToolIcon extends StatelessWidget {
   );
 }
 
+/// App-wide messenger, so errors raised outside a screen can still be shown.
+final rootMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void showToast(
   BuildContext context,
   String msg, {
   IconData icon = Icons.check_circle_rounded,
+  Color iconColor = const Color(0xFF4ADE80),
 }) {
   final m = ScaffoldMessenger.of(context);
   m.hideCurrentSnackBar();
@@ -147,7 +151,7 @@ void showToast(
     SnackBar(
       content: Row(
         children: [
-          Icon(icon, color: const Color(0xFF4ADE80), size: 18),
+          Icon(icon, color: iconColor, size: 18),
           const SizedBox(width: 8),
           Expanded(child: Text(msg, overflow: TextOverflow.ellipsis)),
         ],

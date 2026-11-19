@@ -6,10 +6,14 @@ import '../../../app/theme/tokens.dart';
 import '../../../core/format.dart';
 import '../../../core/haptics.dart';
 import '../../../core/widgets/common.dart';
+import '../../documents/data/doc_repository.dart';
 import '../../documents/data/documents_provider.dart';
+import '../../documents/data/stored_doc.dart';
+import '../../documents/presentation/doc_actions.dart';
 import '../domain/filters.dart';
 import '../domain/scan_session.dart';
 import 'capture_sheet.dart';
+import 'crop_screen.dart';
 
 /// Review captured pages: filter, rotate, reorder, delete, add more, save.
 class ReviewScreen extends ConsumerStatefulWidget {
@@ -287,6 +291,21 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 child: Row(
                   children: [
                     _Action(
+                      icon: Icons.crop_rounded,
+                      label: 'Crop',
+                      onTap: () async {
+                        Haptics.select();
+                        final result = await openCropEditor(
+                          context,
+                          original: page.original,
+                          corners: page.corners,
+                        );
+                        if (result != null) {
+                          await session.setCorners(i, result.corners);
+                        }
+                      },
+                    ),
+                    _Action(
                       icon: Icons.rotate_right_rounded,
                       label: 'Rotate',
                       onTap: () {
@@ -421,9 +440,19 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     final title = name.text.trim().isEmpty
         ? 'Scan ${fmtDay(DateTime.now())}'
         : name.text.trim();
-    final doc = await ref
-        .read(documentsProvider.notifier)
-        .add(name: title, folder: folder, pages: rendered);
+    final StoredDoc doc;
+    try {
+      doc = await ref
+          .read(documentsProvider.notifier)
+          .add(name: title, folder: folder, pages: rendered);
+    } on StorageException catch (e) {
+      // Scanned pages stay in Review, so nothing is lost; just say why.
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // progress
+        showSaveError(context, e);
+      }
+      return;
+    }
     session.clear();
     Haptics.success();
     if (!context.mounted) return;

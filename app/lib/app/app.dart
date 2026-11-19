@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../features/settings/settings_provider.dart';
+import '../core/widgets/common.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -18,6 +19,7 @@ class PdfitApp extends ConsumerWidget {
       darkTheme: buildTheme(Brightness.dark),
       themeMode: mode,
       routerConfig: router,
+      scaffoldMessengerKey: rootMessengerKey,
     );
   }
 }

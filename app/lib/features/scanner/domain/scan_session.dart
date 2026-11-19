@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'doc_detect.dart' show Pt;
 import 'filters.dart';
 import 'page_pipeline.dart';
 
@@ -15,6 +16,8 @@ class ScanPage {
     this.quarterTurns = 0,
     this.preview,
     this.autoCropped = true,
+    required this.original,
+    this.corners,
   });
   final String id;
   final Uint8List source;
@@ -22,6 +25,11 @@ class ScanPage {
   final int quarterTurns;
   final Uint8List? preview;
   final bool autoCropped;
+
+  /// The whole photo [source] was cut from, and where (normalised TL TR BR BL;
+  /// null = the whole photo). Lets the crop be adjusted.
+  final Uint8List original;
+  final List<Pt>? corners;
 
   ScanPage copyWith({
     ScanFilter? filter,
@@ -35,6 +43,18 @@ class ScanPage {
     quarterTurns: quarterTurns ?? this.quarterTurns,
     preview: clearPreview ? null : (preview ?? this.preview),
     autoCropped: autoCropped,
+    original: original,
+    corners: corners,
+  );
+
+  ScanPage recropped(Uint8List source, List<Pt>? corners) => ScanPage(
+    id: id,
+    source: source,
+    filter: filter,
+    quarterTurns: quarterTurns,
+    autoCropped: corners != null,
+    original: original,
+    corners: corners,
   );
 }
 
@@ -44,10 +64,7 @@ class ScanSessionNotifier extends Notifier<List<ScanPage>> {
   @override
   List<ScanPage> build() => const [];
 
-  void addPages(
-    List<({Uint8List jpeg, bool cropped})> pages,
-    ScanFilter filter,
-  ) {
+  void addPages(List<PageCrop> pages, ScanFilter filter) {
     final added = [
       for (final p in pages)
         ScanPage(
@@ -55,6 +72,9 @@ class ScanSessionNotifier extends Notifier<List<ScanPage>> {
           source: p.jpeg,
           filter: filter,
           autoCropped: p.cropped,
+          // System-scanner pages come pre-cut: their "original" is the page itself.
+          original: p.original ?? p.jpeg,
+          corners: p.original == null ? null : p.corners,
         ),
     ];
     state = [...state, ...added];
@@ -82,6 +102,18 @@ class ScanSessionNotifier extends Notifier<List<ScanPage>> {
       p.id,
       p.copyWith(quarterTurns: (p.quarterTurns + 1) % 4, clearPreview: true),
     );
+    _renderPreview(p.id);
+  }
+
+  /// Re-cuts page [index] from its original photo along [corners] (null = whole).
+  Future<void> setCorners(int index, List<Pt>? corners) async {
+    final p = state[index];
+    final src = await compute(cropPage, (
+      original: p.original,
+      corners: corners,
+    ));
+    if (!state.any((x) => x.id == p.id)) return;
+    _replace(p.id, p.recropped(src, corners));
     _renderPreview(p.id);
   }
 

@@ -6,7 +6,9 @@ import '../../../app/theme/tokens.dart';
 import '../../../core/format.dart';
 import '../../../core/haptics.dart';
 import '../../../core/widgets/common.dart';
+import '../../documents/data/doc_repository.dart';
 import '../../documents/data/documents_provider.dart';
+import '../../documents/presentation/doc_actions.dart';
 import '../../documents/data/stored_doc.dart';
 import '../../documents/presentation/doc_tile.dart';
 import '../domain/page_ranges.dart';
@@ -80,9 +82,16 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
 
   Future<void> _run(StoredDoc d, List<List<int>> groups) async {
     setState(() => _busy = true);
-    final created = await ref
-        .read(documentsProvider.notifier)
-        .split(d.id, groups);
+    final List<StoredDoc> created;
+    try {
+      created = await ref.read(documentsProvider.notifier).split(d.id, groups);
+    } on StorageException catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        showSaveError(context, e);
+      }
+      return;
+    }
     Haptics.success();
     if (!mounted) return;
     context.pop();

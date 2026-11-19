@@ -9,6 +9,7 @@ import '../../documents/presentation/import_pdf_flow.dart';
 import '../../settings/settings_provider.dart';
 import '../data/scanner_bridge.dart';
 import '../domain/scan_session.dart';
+import 'camera_scan_screen.dart';
 
 enum _Source { camera, photos, pdf }
 
@@ -68,7 +69,7 @@ Future<void> startScan(BuildContext context, WidgetRef ref) async {
   List<CapturedPage>? pages;
   try {
     if (source == _Source.camera) {
-      pages = await ScannerBridge.scanWithCamera();
+      pages = await _cameraPages(context, ScanMode.batch);
     } else {
       // Spinner only after the user has picked, never on top of the picker.
       final files = await ScannerBridge.pickPhotos();
@@ -89,6 +90,51 @@ Future<void> startScan(BuildContext context, WidgetRef ref) async {
     }
     return;
   }
+  if (context.mounted) await _addAndReview(context, ref, pages);
+}
+
+/// Opens Pagecrane's camera straight away (Tools: Batch Scan, ID Card Scan).
+Future<void> startCameraScan(
+  BuildContext context,
+  WidgetRef ref, {
+  ScanMode mode = ScanMode.batch,
+}) async {
+  Haptics.light();
+  try {
+    final pages = await _cameraPages(context, mode);
+    if (context.mounted) await _addAndReview(context, ref, pages);
+  } on ScannerUnavailable {
+    if (context.mounted) {
+      showToast(
+        context,
+        'Camera scanner unavailable here. Try Import photos.',
+        icon: Icons.no_photography_rounded,
+      );
+    }
+  }
+}
+
+/// Pagecrane's own camera; the system scanner is the fallback where it can't run.
+Future<List<CapturedPage>?> _cameraPages(
+  BuildContext context,
+  ScanMode mode,
+) async {
+  final result = await openCameraScan(context, mode: mode);
+  if (!context.mounted) return null;
+  return switch (result) {
+    null => null,
+    CameraScanPages(:final pages) => pages,
+    CameraScanUseSystem() => await ScannerBridge.scanWithCamera(),
+    CameraScanImportFiles() =>
+      context.mounted ? await _importFiles(context) : null,
+  };
+}
+
+Future<void> _addAndReview(
+  BuildContext context,
+  WidgetRef ref,
+  List<CapturedPage>? pages,
+) async {
   if (pages == null || pages.isEmpty || !context.mounted) return;
 
   Haptics.medium();
@@ -104,6 +150,17 @@ Future<void> startScan(BuildContext context, WidgetRef ref) async {
     );
   }
   if (GoRouterState.of(context).uri.path != '/review') context.push('/review');
+}
+
+/// Page images picked from the Files app, auto-cropped like imported photos.
+Future<List<CapturedPage>?> _importFiles(BuildContext context) async {
+  final files = await ScannerBridge.pickImageFiles();
+  if (files == null || !context.mounted) return null;
+  return _withProgress(
+    context,
+    'Finding page edges…',
+    () => ScannerBridge.processPhotos(files),
+  );
 }
 
 /// Shows a blocking progress dialog while [task] runs (only if it takes > 150 ms).

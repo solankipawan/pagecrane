@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart' show compute;
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../domain/page_pipeline.dart';
 
-typedef CapturedPage = ({Uint8List jpeg, bool cropped});
+typedef CapturedPage = PageCrop;
 
 /// Two capture paths (docs/ARCHITECTURE.md §1):
 ///  * camera → native scanner (VisionKit on iOS, ML Kit on Android): live edge
@@ -33,6 +33,8 @@ class ScannerBridge {
       pages.add((
         jpeg: await compute(prepareScannedPage, bytes),
         cropped: true,
+        original: null, // already cut by the system scanner
+        corners: null,
       ));
     }
     await CunningDocumentScanner.cleanCache();
@@ -44,6 +46,17 @@ class ScannerBridge {
     final files = await ImagePicker().pickMultiImage(
       requestFullMetadata: false,
     );
+    return files.isEmpty ? null : files;
+  }
+
+  /// Page images from the Files app (iCloud Drive, Downloads…). Null if cancelled.
+  static Future<List<XFile>?> pickImageFiles() async {
+    // pickFiles is multi-select by default.
+    final r = await FilePicker.pickFiles(type: FileType.image);
+    final files = [
+      for (final f in r)
+        if (f.path != null) XFile(f.path!),
+    ];
     return files.isEmpty ? null : files;
   }
 

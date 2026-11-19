@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show compute;
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/painting.dart';
@@ -54,16 +55,61 @@ class DocumentsNotifier extends AsyncNotifier<List<StoredDoc>> {
     await _repo.delete(id);
   }
 
-  Future<void> toggleStar(String id) => _commit([
-    for (final d in _docs) d.id == id ? d.copyWith(starred: !d.starred) : d,
-  ]);
+  Future<void> toggleStar(String id) =>
+      _update(id, (d) => d.copyWith(starred: !d.starred));
 
-  Future<void> rename(String id, String name) => _commit([
-    for (final d in _docs)
-      d.id == id ? d.copyWith(name: name, updatedAt: DateTime.now()) : d,
-  ]);
+  Future<void> rename(String id, String name) =>
+      _update(id, (d) => d.copyWith(name: name, updatedAt: DateTime.now()));
+
+  /// Index + the document's own meta.json (so a rebuilt index keeps the change).
+  Future<void> _update(String id, StoredDoc Function(StoredDoc) f) async {
+    final next = [for (final d in _docs) d.id == id ? f(d) : d];
+    await _commit(next);
+    final d = next.where((d) => d.id == id).firstOrNull;
+    if (d != null) await _repo.writeMeta(d);
+  }
 
   /// Merge = concatenate the source documents' pages, in the given order.
+  /// Rewrites document [id] with its pages in [order] (old 0-based indices).
+  Future<void> reorderPages(String id, List<int> order) async {
+    final d = byId(id)!;
+    final pages = await _repo.readPages(d);
+    final updated = await _repo.replacePages(d, [
+      for (final i in order) pages[i],
+    ]);
+    for (final f in [..._repo.pagesOf(updated), _repo.thumbOf(d.id)]) {
+      FileImage(f).evict(); // same paths, new pixels
+    }
+    await _commit([updated, ..._docs.where((x) => x.id != id)]);
+  }
+
+  /// Reshapes every page of [id] to paper proportions [ratio] (h/w, portrait),
+  /// fitting with white margins or filling (see [fitToPaper]), then rebuilds the PDF.
+  Future<void> resizePages(
+    String id, {
+    required double ratio,
+    required bool fill,
+    void Function(double)? onProgress,
+  }) async {
+    final d = byId(id)!;
+    final pages = await _repo.readPages(d);
+    final out = <Uint8List>[];
+    for (var i = 0; i < pages.length; i++) {
+      out.add(
+        await compute(fitToPaper, (src: pages[i], ratio: ratio, fill: fill)),
+      );
+      onProgress?.call((i + 1) / pages.length);
+    }
+    final updated = await _repo.replacePages(d, out);
+    for (final f in [..._repo.pagesOf(updated), _repo.thumbOf(d.id)]) {
+      FileImage(f).evict(); // same paths, new pixels
+    }
+    await _commit([updated, ..._docs.where((x) => x.id != id)]);
+  }
+
+  /// The page images of a stored document (for merging with outside PDFs).
+  Future<List<Uint8List>> pagesOf(String id) => _repo.readPages(byId(id)!);
+
   Future<StoredDoc> merge(List<String> ids, String name) async {
     final sources = [for (final id in ids) byId(id)!];
     final pages = <Uint8List>[
@@ -124,23 +170,98 @@ class DocumentsNotifier extends AsyncNotifier<List<StoredDoc>> {
   }) async {
     final d = byId(id)!;
     final pages = await _repo.readPages(d);
+    final out = await _reencodeAll(
+      pages,
+      level.quality,
+      level.scale,
+      onProgress,
+    );
+    return _keepIfSmaller(d, pages, out);
+  }
+
+  /// Plans a "fit under [targetBytes]" re-encode from a page-1 sample (see
+  /// [planForTarget]); used for the live estimate.
+  Future<({int quality, double scale, int estimate, bool fits})> planTarget(
+    String id,
+    int targetBytes,
+  ) async {
+    final d = byId(id)!;
+    final first = await _repo.pageOf(d.id, 0).readAsBytes();
+    return compute(planForTarget, (
+      page: first,
+      pages: d.pageCount,
+      target: targetBytes,
+    ));
+  }
+
+  /// Compresses so the PDF fits under [targetBytes]. Starts from the page-1 plan,
+  /// then checks the real total and tightens up to twice if pages turned out
+  /// heavier than the sample. Always re-encodes from the original pages.
+  Future<({int before, int after, bool reached})> compressToTarget(
+    String id,
+    int targetBytes, {
+    void Function(double)? onProgress,
+  }) async {
+    final d = byId(id)!;
+    final pages = await _repo.readPages(d);
+    final plan = await compute(planForTarget, (
+      page: pages.first,
+      pages: pages.length,
+      target: targetBytes,
+    ));
+    var q = plan.quality;
+    var s = plan.scale;
+    const passes = 3;
+    late List<Uint8List> out;
+    for (var pass = 0; pass < passes; pass++) {
+      out = await _reencodeAll(pages, q, s, (v) {
+        onProgress?.call((pass + v) / passes);
+      });
+      final total = out.fold(0, (a, b) => a + b.length);
+      final est = total + 1200 + pages.length * 400;
+      if (est <= targetBytes) break;
+      // Bytes scale roughly with pixel count: shrink by the square root of the gap.
+      s = math.max(0.12, s * math.sqrt(targetBytes / est) * 0.95);
+      q = math.max(30, q - 6);
+    }
+    onProgress?.call(1);
+    final r = await _keepIfSmaller(d, pages, out);
+    return (before: r.before, after: r.after, reached: r.after <= targetBytes);
+  }
+
+  Future<List<Uint8List>> _reencodeAll(
+    List<Uint8List> pages,
+    int quality,
+    double scale,
+    void Function(double)? onProgress,
+  ) async {
     final out = <Uint8List>[];
     for (var i = 0; i < pages.length; i++) {
-      final src = pages[i];
       out.add(
         await compute(reencode, (
-          src: src,
-          scale: level.scale,
-          quality: level.quality,
+          src: pages[i],
+          scale: scale,
+          quality: quality,
         )),
       );
       onProgress?.call((i + 1) / pages.length);
     }
-    final updated = await _repo.replacePages(d, out);
+    return out;
+  }
+
+  Future<({int before, int after})> _keepIfSmaller(
+    StoredDoc d,
+    List<Uint8List> before,
+    List<Uint8List> after,
+  ) async {
+    final oldBytes = before.fold(0, (a, b) => a + b.length);
+    final newBytes = after.fold(0, (a, b) => a + b.length);
+    if (newBytes >= oldBytes) return (before: d.sizeBytes, after: d.sizeBytes);
+    final updated = await _repo.replacePages(d, after);
     for (final f in [..._repo.pagesOf(updated), _repo.thumbOf(d.id)]) {
       FileImage(f).evict(); // same paths, new pixels
     }
-    await _commit([updated, ..._docs.where((x) => x.id != id)]);
+    await _commit([updated, ..._docs.where((x) => x.id != d.id)]);
     return (before: d.sizeBytes, after: updated.sizeBytes);
   }
 }

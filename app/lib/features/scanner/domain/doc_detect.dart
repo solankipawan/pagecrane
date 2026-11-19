@@ -12,13 +12,20 @@ typedef Pt = (double, double);
 /// Same algorithm as the web prototype; the camera path uses VisionKit / ML Kit
 /// instead, this one powers "Import photo → auto-crop".
 List<Pt>? detectQuad(Rgba p) {
-  final w = p.w, h = p.h, n = w * h, data = p.d;
+  final n = p.w * p.h, data = p.d;
   final g = Uint8List(n);
-  final hist = List<int>.filled(256, 0);
   for (var i = 0, j = 0; i < n; i++, j += 4) {
-    final v = (data[j] * 77 + data[j + 1] * 150 + data[j + 2] * 29) >> 8;
-    g[i] = v;
-    hist[v]++;
+    g[i] = (data[j] * 77 + data[j + 1] * 150 + data[j + 2] * 29) >> 8;
+  }
+  return detectQuadGray(g, p.w, p.h);
+}
+
+/// [detectQuad] on 8-bit luma (row-major, [w]×[h]): what the live camera feeds in.
+List<Pt>? detectQuadGray(Uint8List g, int w, int h) {
+  final n = w * h;
+  final hist = List<int>.filled(256, 0);
+  for (var i = 0; i < n; i++) {
+    hist[g[i]]++;
   }
   var sum = 0.0;
   for (var i = 0; i < 256; i++) {
@@ -79,11 +86,22 @@ List<Pt>? detectQuad(Rgba p) {
   final frac = bestSize / n;
   if (frac < 0.08 || frac > 0.9) return null;
 
+  // Open notebook / book: keep only the page under the frame centre.
+  final cut = _gutter(g, lab, bestLab, w, h, mBack, mFore - mBack);
+  bool kept(int x, int y) {
+    if (cut == null) return true;
+    final v = cut.vertical ? x : y;
+    return cut.keepLow ? v <= cut.at : v >= cut.at;
+  }
+
   Pt tl = (0, 0), tr = (0, 0), br = (0, 0), bl = (0, 0);
   var minS = 1 << 30, maxS = -1, minD = 1 << 30, maxD = -(1 << 30);
+  var keptSize = 0;
   for (var i = 0; i < n; i++) {
     if (lab[i] != bestLab) continue;
     final x = i % w, y = i ~/ w, s = x + y, dd = x - y;
+    if (!kept(x, y)) continue;
+    keptSize++;
     if (s < minS) {
       minS = s;
       tl = (x.toDouble(), y.toDouble());
@@ -108,8 +126,114 @@ List<Pt>? detectQuad(Rgba p) {
     area += a.$1 * b.$2 - b.$1 * a.$2;
   }
   area = area.abs() / 2;
-  if (area < n * 0.08 || bestSize / area < 0.6) return null;
+  if (area < n * 0.08 || keptSize / area < 0.6) return null;
   return quad;
+}
+
+/// Looks for a page gutter: a narrow dark band running straight through the sheet
+/// blob ([label] in [lab]), splitting it into two sizeable halves, like the fold of an
+/// open notebook. Pixels outside the blob count as background ([back]), so a gutter
+/// dark enough to fall below the threshold is found too. Returns where to cut and
+/// which side to keep (the one holding the frame centre, where the user is aiming).
+({bool vertical, int at, bool keepLow})? _gutter(
+  Uint8List g,
+  Int32List lab,
+  int label,
+  int w,
+  int h,
+  double back,
+  double contrast,
+) {
+  var x0 = w, x1 = -1, y0 = h, y1 = -1;
+  for (var i = 0; i < w * h; i++) {
+    if (lab[i] != label) continue;
+    final x = i % w, y = i ~/ w;
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  final bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+  if (bw < 12 || bh < 12) return null;
+
+  ({bool vertical, int at, bool keepLow})? scan(bool vertical) {
+    final len = vertical ? bw : bh, span = vertical ? bh : bw;
+    final sum = Float64List(len), cnt = Int32List(len);
+    for (var y = y0; y <= y1; y++) {
+      for (var x = x0; x <= x1; x++) {
+        final i = y * w + x;
+        if (lab[i] != label) continue;
+        final k = vertical ? x - x0 : y - y0;
+        sum[k] += g[i];
+        cnt[k]++;
+      }
+    }
+    final prof = Float64List(len);
+    for (var k = 0; k < len; k++) {
+      prof[k] = (sum[k] + (span - cnt[k]) * back) / span;
+    }
+    final smooth = Float64List(len);
+    for (var k = 0; k < len; k++) {
+      final a = prof[math.max(0, k - 1)], b = prof[math.min(len - 1, k + 1)];
+      smooth[k] = (a + prof[k] + b) / 3;
+    }
+    final sorted = [...smooth]..sort();
+    final median = sorted[len ~/ 2];
+    final lo = (len * 0.15).floor(), hi = (len * 0.85).ceil();
+    var at = -1;
+    var minV = double.infinity;
+    for (var k = lo; k < hi; k++) {
+      if (smooth[k] < minV) {
+        minV = smooth[k];
+        at = k;
+      }
+    }
+    if (at < 0) return null;
+    final depth = median - minV;
+    if (depth < math.max(12, 0.2 * contrast)) return null;
+    // Narrow: a gutter, not a wide dark region such as a photo on the page.
+    final half = median - depth / 2;
+    var bLo = at, bHi = at;
+    while (bLo > 0 && smooth[bLo - 1] < half) {
+      bLo--;
+    }
+    while (bHi < len - 1 && smooth[bHi + 1] < half) {
+      bHi++;
+    }
+    if (bHi - bLo + 1 > len * 0.12) return null;
+    // Unique: lines of text make many similar dips; a gutter is one clear dip.
+    var other = double.infinity;
+    for (var k = lo; k < hi; k++) {
+      if (k >= bLo - 2 && k <= bHi + 2) continue;
+      if (smooth[k] < other) other = smooth[k];
+    }
+    if (median - other > depth * 0.5) return null;
+    // Both halves must be real pages, not a sliver.
+    var low = 0, high = 0;
+    for (var k = 0; k < len; k++) {
+      if (k < bLo) low += cnt[k];
+      if (k > bHi) high += cnt[k];
+    }
+    final total = low + high;
+    if (total == 0 || low < total * 0.12 || high < total * 0.12) return null;
+    final base = vertical ? x0 : y0;
+    final centre = (vertical ? w : h) / 2;
+    final keepLow = centre < base + at || (centre == base + at && low > high);
+    return (
+      vertical: vertical,
+      // Cut just past the whole gutter band on the side being dropped.
+      at: keepLow ? base + bLo - 1 : base + bHi + 1,
+      keepLow: keepLow,
+    );
+  }
+
+  // A side-by-side spread is wide; a top-and-bottom one is tall.
+  if (bw >= bh * 0.8) {
+    final v = scan(true);
+    if (v != null) return v;
+  }
+  if (bh >= bw * 0.8) return scan(false);
+  return null;
 }
 
 /// Projective map from the unit square to quad TL,TR,BR,BL (Heckbert).
@@ -193,8 +317,16 @@ img.Image warp(Rgba src, List<Pt> q, {int maxDim = 2400}) {
   return Rgba(w, h, out).toImage();
 }
 
-/// Detect on a 160 px copy, warp at full resolution. Returns null if no sheet found.
-img.Image? autoCrop(img.Image full) {
+/// Pulls corners 1 % towards their centre so no background shows on the edges.
+List<Pt> insetCorners(List<Pt> q, [double k = 0.01]) {
+  final cx = q.fold(0.0, (a, p) => a + p.$1) / 4,
+      cy = q.fold(0.0, (a, p) => a + p.$2) / 4;
+  return [for (final (x, y) in q) (x + (cx - x) * k, y + (cy - y) * k)];
+}
+
+/// Detects the sheet on a 160 px copy of [full]. Returns its corners TL, TR, BR, BL
+/// normalised to 0..1 and already inset, or null if no sheet was found.
+List<Pt>? findPageCorners(img.Image full) {
   const sw = 160;
   final sh = math.max(1, (sw * full.height / full.width).round());
   final small = Rgba.of(
@@ -207,11 +339,18 @@ img.Image? autoCrop(img.Image full) {
   );
   final q = detectQuad(small);
   if (q == null) return null;
-  final kx = full.width / sw, ky = full.height / sh;
-  var pts = [for (final (x, y) in q) ((x + 0.5) * kx, (y + 0.5) * ky)];
-  // Pull corners in 1 % so no background shows on the edges.
-  final cx = pts.fold(0.0, (a, p) => a + p.$1) / 4,
-      cy = pts.fold(0.0, (a, p) => a + p.$2) / 4;
-  pts = [for (final (x, y) in pts) (x + (cx - x) * 0.01, y + (cy - y) * 0.01)];
-  return warp(Rgba.of(full), pts);
+  return insetCorners([
+    for (final (x, y) in q) ((x + 0.5) / sw, (y + 0.5) / sh),
+  ]);
+}
+
+/// Perspective-corrects [full] inside normalised corners [c].
+img.Image warpNormalized(img.Image full, List<Pt> c) => warp(Rgba.of(full), [
+  for (final (x, y) in c) (x * full.width, y * full.height),
+]);
+
+/// Detect on a 160 px copy, warp at full resolution. Returns null if no sheet found.
+img.Image? autoCrop(img.Image full) {
+  final c = findPageCorners(full);
+  return c == null ? null : warpNormalized(full, c);
 }

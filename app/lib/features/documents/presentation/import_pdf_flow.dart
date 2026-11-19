@@ -8,7 +8,10 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/format.dart';
 import '../../../core/haptics.dart';
 import '../../../core/widgets/common.dart';
+import '../data/doc_repository.dart';
 import '../data/documents_provider.dart';
+import '../data/stored_doc.dart';
+import 'doc_actions.dart';
 import '../data/pdf_import.dart';
 
 /// Pick a PDF from Files → (password if needed) → render pages → save to the library → open it.
@@ -16,7 +19,16 @@ Future<void> importPdf(BuildContext context, WidgetRef ref) async {
   Haptics.light();
   final picked = await PdfImporter.pick();
   if (picked == null || !context.mounted) return;
+  await importPdfFile(context, ref, picked);
+}
 
+/// Imports a PDF already on disk (picked, or opened from another app) into the
+/// library: password if needed → render pages → save → open it.
+Future<void> importPdfFile(
+  BuildContext context,
+  WidgetRef ref,
+  ({String path, String name}) picked,
+) async {
   var attempts = 0;
   final PdfDocument doc;
   try {
@@ -114,9 +126,15 @@ Future<void> importPdf(BuildContext context, WidgetRef ref) async {
     return;
   }
 
-  final saved = await ref
-      .read(documentsProvider.notifier)
-      .add(name: picked.name, folder: 'Imported', pages: pages);
+  final StoredDoc saved;
+  try {
+    saved = await ref
+        .read(documentsProvider.notifier)
+        .add(name: picked.name, folder: 'Imported', pages: pages);
+  } on StorageException catch (e) {
+    if (context.mounted) showSaveError(context, e);
+    return;
+  }
   Haptics.success();
   if (!context.mounted) return;
   context.push('/doc/${saved.id}');

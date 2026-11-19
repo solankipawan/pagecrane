@@ -11,3 +11,6 @@
 key.properties
 *.jks
 *.keystore
+
+# Built APK/AAB files — share them, don't commit them
+release-builds/

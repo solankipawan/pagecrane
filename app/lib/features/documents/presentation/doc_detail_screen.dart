@@ -9,6 +9,7 @@ import '../../../core/haptics.dart';
 import '../../../core/widgets/common.dart';
 import '../data/documents_provider.dart';
 import 'doc_tile.dart';
+import 'pdf_reader.dart';
 
 /// Page viewer + document actions (share, star, rename, compress, delete).
 /// Annotation (signature, highlight, comments) is a later milestone.
@@ -22,6 +23,16 @@ class DocDetailScreen extends ConsumerStatefulWidget {
 
 class _DocDetailScreenState extends ConsumerState<DocDetailScreen> {
   int _page = 0;
+
+  /// Horizontal mode's controller, recreated at the current page after a switch
+  /// so changing direction keeps your place.
+  PageController? _pc;
+
+  @override
+  void dispose() {
+    _pc?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,10 +126,17 @@ class _DocDetailScreenState extends ConsumerState<DocDetailScreen> {
     }
 
     final pages = repo.pagesOf(doc);
+    final vertical = ref.watch(readerVerticalProvider);
+    if (vertical && _pc != null) {
+      final old = _pc!;
+      _pc = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(doc.name, overflow: TextOverflow.ellipsis),
         actions: [
+          const ScrollDirectionButton(),
           IconButton(
             tooltip: doc.starred ? 'Remove star' : 'Star',
             icon: Icon(
@@ -156,35 +174,47 @@ class _DocDetailScreenState extends ConsumerState<DocDetailScreen> {
       body: Column(
         children: [
           Expanded(
-            child: PageView.builder(
-              itemCount: pages.length,
-              onPageChanged: (i) => setState(() => _page = i),
-              itemBuilder: (_, i) => InteractiveViewer(
-                maxScale: 4,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-                  child: Center(
-                    child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 30,
-                            offset: Offset(0, 10),
+            child: vertical
+                ? PdfReader(
+                    // New file version (compress, resize…) → reload.
+                    key: ValueKey(doc.updatedAt),
+                    path: repo.pdfOf(doc.id).path,
+                    vertical: true,
+                    initialPage: _page,
+                    onPage: (p) {
+                      if (p != _page) setState(() => _page = p);
+                    },
+                  )
+                : PageView.builder(
+                    controller: _pc ??= PageController(initialPage: _page),
+                    itemCount: pages.length,
+                    onPageChanged: (i) => setState(() => _page = i),
+                    itemBuilder: (_, i) => InteractiveViewer(
+                      maxScale: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                        child: Center(
+                          child: DecoratedBox(
+                            decoration: const BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x33000000),
+                                  blurRadius: 30,
+                                  offset: Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Image.file(
+                              pages[i],
+                              key: ValueKey('${doc.updatedAt}$i'),
+                              gaplessPlayback: true,
+                              semanticLabel: 'Page ${i + 1}',
+                            ),
                           ),
-                        ],
-                      ),
-                      child: Image.file(
-                        pages[i],
-                        key: ValueKey('${doc.updatedAt}$i'),
-                        gaplessPlayback: true,
-                        semanticLabel: 'Page ${i + 1}',
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8),

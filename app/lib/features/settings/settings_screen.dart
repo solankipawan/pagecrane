@@ -146,6 +146,13 @@ class SettingsScreen extends ConsumerWidget {
                 'No account, no uploads. Files leave only when you share them.',
               ),
               row(
+                Icons.cloud_off_rounded,
+                px.convert,
+                'Not in phone backups',
+                'iCloud and Google backups skip your documents. Share or export '
+                    'anything you want to keep before changing phones.',
+              ),
+              row(
                 Icons.lock_rounded,
                 px.pdf,
                 'Secure Vault',

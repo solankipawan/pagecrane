@@ -6,14 +6,39 @@ import '../../app/theme/tokens.dart';
 import '../../core/format.dart';
 import '../../core/haptics.dart';
 import '../../core/widgets/common.dart';
+import '../../core/widgets/empty_states.dart';
 import '../documents/data/documents_provider.dart';
 import '../documents/data/stored_doc.dart';
 import '../documents/presentation/doc_tile.dart';
 import '../documents/presentation/import_pdf_flow.dart';
+import '../scanner/presentation/capture_sheet.dart';
 
 enum _View { all, starred, folders }
 
 enum _Sort { date, name, size }
+
+/// Quick filters offered when a search finds nothing (and shown as a removable
+/// chip while active).
+enum _Filter {
+  pdf('PDF'),
+  today('Scanned Today'),
+  small('Under 1 MB');
+
+  const _Filter(this.label);
+  final String label;
+
+  bool test(StoredDoc d) {
+    final now = DateTime.now();
+    return switch (this) {
+      _Filter.pdf => true, // every stored document is a PDF
+      _Filter.today =>
+        d.createdAt.year == now.year &&
+            d.createdAt.month == now.month &&
+            d.createdAt.day == now.day,
+      _Filter.small => d.sizeBytes < 1000000,
+    };
+  }
+}
 
 class FilesScreen extends ConsumerStatefulWidget {
   const FilesScreen({super.key});
@@ -27,15 +52,44 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   var _sort = _Sort.date;
   var _q = '';
   String? _folder;
+  _Filter? _filter;
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _clearSearch() {
+    Haptics.select();
+    _search.clear();
+    setState(() => _q = '');
+  }
+
+  /// From the no-results state: drop the query and show [f] (null = everything).
+  void _applyFilter(_Filter? f) {
+    Haptics.select();
+    _search.clear();
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _q = '';
+      _filter = f;
+      _folder = null;
+      if (_view == _View.folders) _view = _View.all;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final docs = ref.watch(documentsProvider).value ?? const <StoredDoc>[];
+    final docsAsync = ref.watch(documentsProvider);
+    final docs = docsAsync.value ?? const <StoredDoc>[];
     final q = _q.toLowerCase();
     final list =
         docs
             .where((d) => _view != _View.starred || d.starred)
             .where((d) => _folder == null || d.folder == _folder)
+            .where((d) => _filter == null || _filter!.test(d))
             .where(
               (d) =>
                   q.isEmpty ||
@@ -99,11 +153,19 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               child: GlassSurface(
                 radius: 16,
                 child: TextField(
+                  controller: _search,
                   onChanged: (v) => setState(() => _q = v),
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     hintText: 'Search',
                     prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _q.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear search',
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: _clearSearch,
+                          ),
                     filled: false,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -130,23 +192,59 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        if (_folder != null)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: InputChip(
-              avatar: const Icon(Icons.folder_open_rounded, size: 18),
-              label: Text(_folder!),
-              onDeleted: () => setState(() => _folder = null),
-            ),
+        if (_folder != null || _filter != null)
+          Wrap(
+            spacing: 8,
+            children: [
+              if (_folder != null)
+                InputChip(
+                  avatar: const Icon(Icons.folder_open_rounded, size: 18),
+                  label: Text(_folder!),
+                  onDeleted: () => setState(() => _folder = null),
+                ),
+              if (_filter != null)
+                InputChip(
+                  avatar: const Icon(Icons.filter_list_rounded, size: 18),
+                  label: Text(_filter!.label),
+                  deleteButtonTooltipMessage: 'Remove filter',
+                  onDeleted: () => setState(() => _filter = null),
+                ),
+            ],
           ),
-        if (showFolders)
+        if (docsAsync is AsyncData && docs.isEmpty)
+          IllustratedEmptyState(
+            art: const ScanEmptyArt(),
+            title: 'No documents scanned yet',
+            body: 'Scan receipts, notes, or IDs into crisp PDFs right on your device.',
+            primaryLabel: 'Scan First Document',
+            onPrimary: () => startScan(context, ref),
+            secondaryLabel: 'Import PDF',
+            onSecondary: () => importPdf(context, ref),
+          )
+        else if (showFolders)
           _FolderGrid(docs: docs, onOpen: (f) => setState(() => _folder = f))
+        else if (list.isEmpty && q.isNotEmpty)
+          IllustratedEmptyState(
+            art: const SearchEmptyArt(),
+            title: 'No matches for “$_q”',
+            body: docs.length == 1
+                ? 'Check spelling or clear search to view your 1 on\u2011device document.'
+                : 'Check spelling or clear search to view all ${docs.length} on\u2011device documents.',
+            extra: _QuickFilters(selected: _filter, onSelected: _applyFilter),
+            secondaryLabel: 'Clear Search',
+            onSecondary: _clearSearch,
+          )
         else if (list.isEmpty)
           EmptyState(
-            icon: q.isEmpty
-                ? Icons.folder_open_rounded
-                : Icons.search_off_rounded,
-            title: q.isEmpty ? 'Nothing here yet' : 'No results for “$_q”',
+            icon: _view == _View.starred
+                ? Icons.star_outline_rounded
+                : Icons.filter_list_off_rounded,
+            title: _view == _View.starred
+                ? 'No starred documents'
+                : 'Nothing matches this filter',
+            body: _view == _View.starred
+                ? 'Tap the star on a document to keep it here.'
+                : null,
           )
         else
           GlassSurface(
@@ -160,6 +258,32 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       ],
     );
   }
+}
+
+class _QuickFilters extends StatelessWidget {
+  const _QuickFilters({required this.selected, required this.onSelected});
+  final _Filter? selected;
+  final ValueChanged<_Filter?> onSelected;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    alignment: WrapAlignment.center,
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      ChoiceChip(
+        label: const Text('All'),
+        selected: selected == null,
+        onSelected: (_) => onSelected(null),
+      ),
+      for (final f in _Filter.values)
+        ChoiceChip(
+          label: Text(f.label),
+          selected: selected == f,
+          onSelected: (_) => onSelected(f),
+        ),
+    ],
+  );
 }
 
 class _FolderGrid extends StatelessWidget {

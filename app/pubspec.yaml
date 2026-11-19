@@ -47,6 +47,7 @@ dependencies:
   pdfrx: ^3.0.1
   file_picker: ^13.4.0
   url_launcher: ^6.3.3
+  camera: ^0.12.2
 
 dev_dependencies:
   flutter_test:
