@@ -1,0 +1,13 @@
+# OS / editors
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Signing secrets — never commit
+key.properties
+*.jks
+*.keystore

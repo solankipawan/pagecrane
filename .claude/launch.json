@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pdfit-prototype",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5178", "--directory", "prototype"],
+      "port": 5178
+    },
+    {
+      "name": "brand-board",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5179", "--directory", "Design"],
+      "port": 5179
+    }
+  ]
+}

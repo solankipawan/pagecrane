@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches Brand.bgLight in lib/app/theme/tokens.dart, so there is no flash between splash and app. -->
+    <color name="splash_bg">#F3F4F9</color>
+</resources>

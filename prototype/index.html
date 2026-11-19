@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#4c5bff" />
+  <title>PDFit Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="device" id="device">
+    <div class="aurora" aria-hidden="true"><span></span></div>
+
+    <div class="statusbar" aria-hidden="true">
+      <span id="clock">9:41</span>
+      <span class="sb-icons"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span>
+    </div>
+
+    <main class="screens">
+      <!-- ============ HOME ============ -->
+      <section class="screen active" data-screen="home" aria-label="Home">
+        <div class="top">
+          <div>
+            <div class="eyebrow" id="greeting">Good morning</div>
+            <h1>PDFit</h1>
+          </div>
+          <button class="icon-btn glass" id="themeQuick" aria-label="Toggle dark mode"></button>
+        </div>
+
+        <label class="search glass">
+          <i data-lucide="search"></i>
+          <input id="homeSearch" type="search" placeholder="Search documents" aria-label="Search documents" />
+        </label>
+
+        <div class="hero">
+          <div class="hero-row">
+            <div>
+              <h2>Scan to PDF</h2>
+              <p>Auto edge-detect, batch pages, on-device.</p>
+            </div>
+            <button class="hero-btn" data-tool="scan"><i data-lucide="scan-line"></i>Scan</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><b id="stDocs">0</b><span>Documents</span></div>
+            <div class="stat"><b id="stPages">0</b><span>Pages</span></div>
+            <div class="stat"><b id="stSaved">0</b><span>Saved</span></div>
+          </div>
+        </div>
+
+        <h3>Quick tools</h3>
+        <div class="tools-grid" id="quickTools"></div>
+
+        <div class="section-head">
+          <h3>Recent</h3>
+          <button class="link" data-goto="files">See all</button>
+        </div>
+        <div class="list glass" id="recents"></div>
+
+        <h3>Storage</h3>
+        <div class="storage glass" id="storage"></div>
+      </section>
+
+      <!-- ============ FILES ============ -->
+      <section class="screen" data-screen="files" aria-label="Files">
+        <div class="top"><h1>Files</h1></div>
+        <div class="seg" id="filesSeg" role="tablist">
+          <button class="on" data-view="all" role="tab">All</button>
+          <button data-view="starred" role="tab">Starred</button>
+          <button data-view="folders" role="tab">Folders</button>
+        </div>
+        <div class="files-bar">
+          <label class="search glass">
+            <i data-lucide="search"></i>
+            <input id="filesSearch" type="search" placeholder="Search" aria-label="Search files" />
+          </label>
+          <select class="select" id="sortSel" aria-label="Sort by">
+            <option value="date">Newest</option>
+            <option value="name">Name</option>
+            <option value="size">Size</option>
+          </select>
+        </div>
+        <div id="filesBody"></div>
+      </section>
+
+      <!-- ============ TOOLS ============ -->
+      <section class="screen" data-screen="tools" aria-label="Tools">
+        <div class="top"><h1>Tools</h1></div>
+        <div id="toolsBody"></div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section class="screen" data-screen="settings" aria-label="Settings">
+        <div class="top"><h1>Settings</h1></div>
+        <h3>Appearance</h3>
+        <div class="seg" id="themeSeg">
+          <button data-theme="system">System</button>
+          <button data-theme="light">Light</button>
+          <button data-theme="dark">Dark</button>
+        </div>
+        <h3>Scanner</h3>
+        <div class="rows glass">
+          <div class="row">
+            <span class="ti c-scan"><i data-lucide="aperture"></i></span>
+            <span class="rt"><b>Auto-capture</b><span>Shoot when edges are steady</span></span>
+            <label class="switch"><input type="checkbox" id="setAuto" aria-label="Auto-capture" /><span></span></label>
+          </div>
+          <div class="row">
+            <span class="ti c-image"><i data-lucide="vibrate"></i></span>
+            <span class="rt"><b>Haptic feedback</b><span>Ticks on lock, capture and save</span></span>
+            <label class="switch"><input type="checkbox" id="setHaptics" aria-label="Haptic feedback" /><span></span></label>
+          </div>
+          <div class="row" style="flex-wrap:wrap">
+            <span class="ti c-convert"><i data-lucide="sparkles"></i></span>
+            <span class="rt"><b>Default filter</b><span>Applied to new pages</span></span>
+            <div class="chips" id="setFilter" style="width:100%;padding-left:48px"></div>
+          </div>
+        </div>
+        <h3>Privacy</h3>
+        <div class="rows glass">
+          <button class="row" data-native="Secure Vault">
+            <span class="ti c-pdf"><i data-lucide="lock"></i></span>
+            <span class="rt"><b>Secure Vault</b><span>Face ID / fingerprint + AES-256</span></span>
+            <span class="pill">Native</span>
+          </button>
+          <div class="row">
+            <span class="ti c-scan"><i data-lucide="shield-check"></i></span>
+            <span class="rt"><b>On-device only</b><span>No uploads. Files never leave your phone unless you share them.</span></span>
+          </div>
+        </div>
+        <p class="note">PDFit prototype · design reference for the Flutter build (see docs/ARCHITECTURE.md).</p>
+      </section>
+    </main>
+
+    <!-- ============ TAB BAR ============ -->
+    <nav class="tabbar glass" aria-label="Main">
+      <button class="tab on" data-tab="home"><i data-lucide="house"></i>Home</button>
+      <button class="tab" data-tab="files"><i data-lucide="folder"></i>Files</button>
+      <button class="fab" id="fab" aria-label="Scan document"><i data-lucide="scan-line"></i></button>
+      <button class="tab" data-tab="tools"><i data-lucide="layout-grid"></i>Tools</button>
+      <button class="tab" data-tab="settings"><i data-lucide="settings"></i>Settings</button>
+    </nav>
+
+    <!-- ============ SCANNER ============ -->
+    <section class="scanner" id="scanner" aria-label="Document scanner" aria-hidden="true">
+      <canvas id="camCanvas"></canvas>
+      <svg class="quad hidden" id="quad" preserveAspectRatio="none">
+        <polygon id="quadPoly" points="" />
+        <g id="quadCorners"></g>
+      </svg>
+      <div class="scan-top">
+        <button class="icon-btn dark" id="scanClose" aria-label="Close scanner"><i data-lucide="x"></i></button>
+        <div class="scan-status" id="scanStatus" role="status" aria-live="polite"><span class="dot"></span><span id="scanStatusText">Looking for document…</span></div>
+        <button class="icon-btn dark" id="flashBtn" aria-label="Toggle flash"><i data-lucide="zap-off"></i></button>
+      </div>
+      <button class="scan-source" id="scanSource">Starting camera…</button>
+      <div class="scan-bottom">
+        <div class="mode-row">
+          <button class="mode on" data-mode="auto">Auto</button>
+          <button class="mode" data-mode="manual">Manual</button>
+        </div>
+        <div class="shutter-row">
+          <button class="batch-thumb" id="batchThumb" aria-label="Review captured pages">
+            <img id="batchImg" alt="" />
+            <span class="badge" id="batchCount">0</span>
+          </button>
+          <button class="shutter" id="shutter" aria-label="Capture page">
+            <svg class="ring" viewBox="0 0 80 80" aria-hidden="true">
+              <circle class="track" cx="40" cy="40" r="38" />
+              <circle class="prog" id="ringProg" cx="40" cy="40" r="38" />
+            </svg>
+            <span class="core"></span>
+          </button>
+          <button class="done-btn" id="scanDone" disabled>Done</button>
+        </div>
+      </div>
+      <div class="flash-fx" id="flashFx"></div>
+    </section>
+
+    <!-- ============ REVIEW ============ -->
+    <section class="review" id="review" aria-label="Review pages" aria-hidden="true">
+      <div class="review-top">
+        <button class="icon-btn" id="reviewBack" aria-label="Back to scanner"><i data-lucide="chevron-left"></i></button>
+        <h2 id="reviewTitle">Page 1 of 1</h2>
+        <button class="save" id="reviewSave">Save</button>
+      </div>
+      <div class="stage" id="stage"><div class="spinner"></div></div>
+      <div class="filter-row" id="filterRow" role="radiogroup" aria-label="Filter"></div>
+      <div class="page-strip" id="pageStrip"></div>
+      <div class="review-actions">
+        <button class="ra" id="raRotate"><i data-lucide="rotate-cw"></i>Rotate</button>
+        <button class="ra" id="raAll" aria-pressed="false"><i data-lucide="copy-check"></i>Apply to all</button>
+        <button class="ra" id="raAdd"><i data-lucide="plus"></i>Add page</button>
+        <button class="ra danger" id="raDelete"><i data-lucide="trash-2"></i>Delete</button>
+      </div>
+    </section>
+
+    <div class="scrim" id="scrim"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+      <div class="grabber"></div>
+      <div class="sheet-body" id="sheetBody"></div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

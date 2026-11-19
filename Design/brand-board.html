@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Naming &amp; Icon Board</title>
+<style>
+  :root { --bg:#F3F4F9; --card:#fff; --text:#0E1120; --muted:#5A6077; --line:rgba(14,17,32,.08); --primary:#4C5BFF; --ok:#16A34A; --warn:#D97706; --bad:#DC2626; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0A0C12; --card:#151824; --text:#F2F3F8; --muted:#9CA2B6; --line:rgba(255,255,255,.08); --primary:#8A94FF; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1 { font-size: 34px; letter-spacing: -.02em; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 44px 0 6px; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: 0 0 8px; max-width: 760px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
+  .card h3 { margin: 0 0 2px; font-size: 22px; letter-spacing: -.01em; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 99px; margin-right: 6px; }
+  .rec { background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); }
+  .ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+  .bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+  .card p { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+  .card .store { margin-top: 12px; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+  .card a { color: var(--primary); }
+  .icons { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 16px; }
+  .icon-card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; text-align: center; }
+  .icon-card.recommended { outline: 2px solid var(--primary); }
+  .squircle { border-radius: 22.37%; display: block; box-shadow: 0 10px 30px rgba(20,24,60,.18); }
+  .big { width: 160px; height: 160px; margin: 0 auto 14px; }
+  .sizes { display: flex; gap: 14px; align-items: end; justify-content: center; margin: 10px 0 6px; }
+  .s60 { width: 60px; height: 60px; } .s40 { width: 40px; height: 40px; } .s29 { width: 29px; height: 29px; }
+  .icon-card h4 { margin: 0; font-size: 16px; }
+  .icon-card p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .walls { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; margin-top: 16px; }
+  @media (max-width: 720px) { .walls { grid-template-columns: 1fr; } }
+  .wall { border-radius: 28px; padding: 28px 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 8px; }
+  .wall.light { background: linear-gradient(160deg, #cfe3ff, #f6d9ff 60%, #ffe7d1); }
+  .wall.dark { background: linear-gradient(160deg, #10142b, #2a1745 60%, #0b2b33); }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; }
+  .wall.light .app { color: #1b1d2a; } .wall.dark .app { color: #fff; }
+  .app img, .app .ph { width: 60px; height: 60px; }
+  .ph { border-radius: 22.37%; background: rgba(255,255,255,.55); }
+  .wall.dark .ph { background: rgba(255,255,255,.14); }
+  .lockups { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 16px; }
+  .lockup { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 22px; display: flex; align-items: center; gap: 16px; }
+  .lockup img { width: 64px; height: 64px; }
+  .wordmark { font-size: 30px; font-weight: 750; letter-spacing: -.03em; }
+  .wordmark small { display: block; font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .note { color: var(--muted); font-size: 13px; margin-top: 18px; }
+  code { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Naming &amp; app icon</h1>
+  <p class="lede">The working name <b>PDFit</b> is already taken on the App Store by a scanner with the same features. Below: three replacement names, four icon concepts shown at real iPhone sizes, and the pairings that work best.</p>
+
+  <h2>Names</h2>
+  <div class="grid">
+    <div class="card">
+      <span class="tag bad">Taken</span>
+      <h3>PDFit</h3>
+      <p><a href="https://apps.apple.com/app/id6473573055">“PDFit-AI PDF&amp;Scanner”</a> already exists: same features (scan, convert, merge), 4.8★ from 470 ratings. Shipping under this name risks rejection or a takedown, and it's hard to find in search.</p>
+    </div>
+    <div class="card">
+      <span class="tag rec">Recommended</span><span class="tag ok">No match found</span>
+      <h3>Pagefold</h3>
+      <p>Pages + folding: merge, split, compress, sign. It says “documents” immediately, is easy to say and spell in any accent, and the folded-corner icon comes straight from the name.</p>
+      <div class="store">App Store title: <b>Pagefold – Scan &amp; PDF Tools</b> (27/30)</div>
+    </div>
+    <div class="card">
+      <span class="tag ok">No match found</span>
+      <h3>Glassine</h3>
+      <p>The name of a translucent paper, which matches the app's glass design. The most premium and distinctive option, but most people won't know the word, so the subtitle has to do more work.</p>
+      <div class="store">App Store title: <b>Glassine: Scan, Sign &amp; PDF</b> (27/30)</div>
+    </div>
+    <div class="card">
+      <span class="tag ok">No match found</span>
+      <h3>Sheaf</h3>
+      <p>A bundle of papers. Short and elegant, and a natural fit for the stacked-sheets icon. Less familiar to non-native English speakers, and close to “sheet” in spoken search.</p>
+      <div class="store">App Store title: <b>Sheaf – Scanner &amp; PDF Editor</b> (29/30)</div>
+    </div>
+  </div>
+  <p class="note">“No match found” means no app with that name showed up in an App Store web search on 18 Nov 2026. That is not a trademark clearance; check the trademark registry and the App Store Connect name check before committing.</p>
+
+  <h2>Icon concepts</h2>
+  <p class="lede">Each one is a full-bleed 1024 px SVG master (iOS adds the rounded corners). Small sizes are shown because the home screen is where icons are actually seen.</p>
+  <div class="icons">
+    <div class="icon-card recommended">
+      <img class="squircle big" src="icon-concepts/A-fold.svg" alt="Concept A, folded page">
+      <h4>A · Fold</h4>
+      <div class="sizes"><img class="squircle s60" src="icon-concepts/A-fold.svg" alt=""><img class="squircle s40" src="icon-concepts/A-fold.svg" alt=""><img class="squircle s29" src="icon-concepts/A-fold.svg" alt=""></div>
+      <p>Page with a folded corner over a glass sheet, in the app's indigo-to-violet gradient. Pairs with <b>Pagefold</b>.</p>
+    </div>
+    <div class="icon-card">
+      <img class="squircle big" src="icon-concepts/B-scan-frame.svg" alt="Concept B, scan frame">
+      <h4>B · Scan frame</h4>
+      <div class="sizes"><img class="squircle s60" src="icon-concepts/B-scan-frame.svg" alt=""><img class="squircle s40" src="icon-concepts/B-scan-frame.svg" alt=""><img class="squircle s29" src="icon-concepts/B-scan-frame.svg" alt=""></div>
+      <p>Viewfinder corners, a page and a scan beam. The clearest at 29 px and works with any name, but it stresses scanning over the other tools.</p>
+    </div>
+    <div class="icon-card">
+      <img class="squircle big" src="icon-concepts/C-stack.svg" alt="Concept C, stacked sheets">
+      <h4>C · Stack</h4>
+      <div class="sizes"><img class="squircle s60" src="icon-concepts/C-stack.svg" alt=""><img class="squircle s40" src="icon-concepts/C-stack.svg" alt=""><img class="squircle s29" src="icon-concepts/C-stack.svg" alt=""></div>
+      <p>Three fanned sheets (merge, split, compress), from teal to indigo. Pairs with <b>Sheaf</b>.</p>
+    </div>
+    <div class="icon-card">
+      <img class="squircle big" src="icon-concepts/D-glassine.svg" alt="Concept D, frosted glass over a page">
+      <h4>D · Glassine</h4>
+      <div class="sizes"><img class="squircle s60" src="icon-concepts/D-glassine.svg" alt=""><img class="squircle s40" src="icon-concepts/D-glassine.svg" alt=""><img class="squircle s29" src="icon-concepts/D-glassine.svg" alt=""></div>
+      <p>A frosted glass sheet over a page, with the text blurring behind it. A light icon that stands out on dark wallpapers. Pairs with <b>Glassine</b>.</p>
+    </div>
+  </div>
+
+  <h2>On a home screen</h2>
+  <div class="walls">
+    <div class="wall light">
+      <div class="app"><img class="squircle" src="icon-concepts/A-fold.svg" alt="">Pagefold</div>
+      <div class="app"><img class="squircle" src="icon-concepts/B-scan-frame.svg" alt="">Scan frame</div>
+      <div class="app"><div class="ph"></div>Maps</div>
+      <div class="app"><div class="ph"></div>Notes</div>
+      <div class="app"><div class="ph"></div>Photos</div>
+      <div class="app"><img class="squircle" src="icon-concepts/C-stack.svg" alt="">Sheaf</div>
+      <div class="app"><img class="squircle" src="icon-concepts/D-glassine.svg" alt="">Glassine</div>
+      <div class="app"><div class="ph"></div>Mail</div>
+    </div>
+    <div class="wall dark">
+      <div class="app"><img class="squircle" src="icon-concepts/A-fold.svg" alt="">Pagefold</div>
+      <div class="app"><img class="squircle" src="icon-concepts/B-scan-frame.svg" alt="">Scan frame</div>
+      <div class="app"><div class="ph"></div>Maps</div>
+      <div class="app"><div class="ph"></div>Notes</div>
+      <div class="app"><div class="ph"></div>Photos</div>
+      <div class="app"><img class="squircle" src="icon-concepts/C-stack.svg" alt="">Sheaf</div>
+      <div class="app"><img class="squircle" src="icon-concepts/D-glassine.svg" alt="">Glassine</div>
+      <div class="app"><div class="ph"></div>Mail</div>
+    </div>
+  </div>
+
+  <h2>Pairings</h2>
+  <div class="lockups">
+    <div class="lockup"><img class="squircle" src="icon-concepts/A-fold.svg" alt=""><div class="wordmark">Pagefold<small>Scan, sign &amp; shrink PDFs, on your phone</small></div></div>
+    <div class="lockup"><img class="squircle" src="icon-concepts/D-glassine.svg" alt=""><div class="wordmark">Glassine<small>Your paperwork, clear as glass</small></div></div>
+    <div class="lockup"><img class="squircle" src="icon-concepts/C-stack.svg" alt=""><div class="wordmark">Sheaf<small>All your papers, one tidy bundle</small></div></div>
+  </div>
+
+  <p class="note">Masters: <code>Design/icon-concepts/*.svg</code>. The chosen one becomes <code>Design/AppIcon-&lt;Name&gt;.svg</code> and is exported to the iOS and Android icon sets, the same way TrainPulse does it.</p>
+</main>
+</body>
+</html>

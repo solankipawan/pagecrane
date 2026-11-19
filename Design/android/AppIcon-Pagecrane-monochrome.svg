@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Android 13+ themed-icon layer: one colour (only alpha matters; the system tints it).
+       Same page geometry as AppIcon-Pagecrane.svg. The fold is separated from the page by a cut-out
+       gap so it still reads as a flap in a single colour; the back glass sheet is omitted. -->
+  <defs>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <path d="M 590 250 V 330 A 40 40 0 0 0 630 370 H 710" fill="none" stroke="#000" stroke-width="26" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g transform="translate(512 512) scale(1.1) translate(-530 -505)" fill="#000">
+    <path mask="url(#gap)" fill-rule="evenodd" d="M 396 250 H 590 L 710 370 V 714 A 46 46 0 0 1 664 760 H 396 A 46 46 0 0 1 350 714 V 296 A 46 46 0 0 1 396 250 Z
+      M 416 438 H 624 A 14 14 0 0 1 624 466 H 416 A 14 14 0 0 1 416 438 Z
+      M 416 506 H 644 A 14 14 0 0 1 644 534 H 416 A 14 14 0 0 1 416 506 Z
+      M 416 574 H 584 A 14 14 0 0 1 584 602 H 416 A 14 14 0 0 1 416 574 Z
+      M 416 642 H 614 A 14 14 0 0 1 614 670 H 416 A 14 14 0 0 1 416 642 Z"/>
+    <path d="M 604 236 V 318 A 38 38 0 0 0 642 356 H 724 Z"/>
+  </g>
+</svg>

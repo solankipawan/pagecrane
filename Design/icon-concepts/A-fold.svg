@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Concept A · "Fold" — a page with a folded corner over a glass sheet. Pairs with the name Pagefold. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4C5BFF"/>
+      <stop offset=".55" stop-color="#7C5CFF"/>
+      <stop offset="1" stop-color="#B15CFF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".2" cy=".08" r=".8">
+      <stop offset="0" stop-color="#fff" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EEF0FF"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#B9BFFF"/>
+      <stop offset=".6" stop-color="#E4E6FF"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="30" stdDeviation="38" flood-color="#1B1460" flood-opacity=".38"/>
+    </filter>
+    <filter id="foldShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="-10" dy="12" stdDeviation="12" flood-color="#2A2390" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+
+  <g transform="translate(512 512) scale(1.1) translate(-505 -505)">
+  <!-- back glass sheet -->
+  <g transform="translate(-46 18) rotate(-11 530 505)">
+    <rect x="350" y="250" width="360" height="510" rx="46" fill="#fff" fill-opacity=".2" stroke="#fff" stroke-opacity=".6" stroke-width="7"/>
+  </g>
+
+  <!-- front page, top-right corner folded -->
+  <g filter="url(#shadow)">
+    <path d="M 396 250 H 590 L 710 370 V 714 A 46 46 0 0 1 664 760 H 396 A 46 46 0 0 1 350 714 V 296 A 46 46 0 0 1 396 250 Z" fill="url(#page)"/>
+  </g>
+  <path d="M 590 250 V 330 A 40 40 0 0 0 630 370 H 710 Z" fill="url(#fold)" filter="url(#foldShadow)"/>
+
+  <!-- content lines -->
+  <rect x="402" y="438" width="236" height="28" rx="14" fill="#4C5BFF"/>
+  <rect x="402" y="506" width="256" height="28" rx="14" fill="#7C5CFF" fill-opacity=".32"/>
+  <rect x="402" y="574" width="196" height="28" rx="14" fill="#7C5CFF" fill-opacity=".32"/>
+  <rect x="402" y="642" width="226" height="28" rx="14" fill="#7C5CFF" fill-opacity=".32"/>
+  </g>
+</svg>

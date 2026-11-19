@@ -1,0 +1,6 @@
+# Copy to key.properties (same folder) and fill in. key.properties is git-ignored:
+# never commit it or the .jks file, and keep a backup of both somewhere safe.
+storeFile=/Users/<you>/pagecrane-upload.jks
+storePassword=<the keystore password you chose>
+keyAlias=upload
+keyPassword=<the key password, usually the same>
